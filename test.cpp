@@ -111,8 +111,8 @@ struct Builder {
     }
     constexpr
     Builder& irq(literals::_mode mode, int index) {
-        int clr;
-        int wait;
+        int clr{};
+        int wait{};
         if(mode == literals::block) {
             clr = 0;
             wait = 1;
@@ -184,27 +184,29 @@ static void test2() {
     constexpr auto b = Builder()
     .label("do_nack")
     .jmp(y_dec, "entry_point")        // Continue if NAK was expected
-    .irq(block, rel(0))             // Otherwise stop, ask for help
+    .irq(block, rel(0))               // Otherwise stop, ask for help
+
     .label("do_byte")
-    .set(x, 7)                   // Loop 8 times
+    .set(x, 7)                        // Loop 8 times
     .label("bitloop")
-    .out(pindirs, 1)         [7] // Serialise write data (all-ones if reading)
-    .nop().side(1) [2] // SCL rising edge
-    .wait(1, pin, 1)          [4] // Allow clock to be stretched
-    .in(pins, 1)             [7] // Sample read data in middle of SCL pulse
+    .out(pindirs, 1)              [7] // Serialise write data (all-ones if reading)
+    .nop().side(1)                [2] // SCL rising edge
+    .wait(1, pin, 1)              [4] // Allow clock to be stretched
+    .in(pins, 1)                  [7] // Sample read data in middle of SCL pulse
     .jmp(x_dec, "bitloop").side(0)[7] // SCL falling edge
-    .out(pindirs, 1)         [7] // On reads, we provide the ACK.
-    .nop().side(1) [7]       // SCL rising edge
-    .wait(1, pin, 1)          [7] // Allow clock to be stretched
-    .jmp(pin, "do_nack").side(0)[2] // Test SDA for ACK/NAK, fall through if ACK
+    .out(pindirs, 1)              [7] // On reads, we provide the ACK.
+    .nop().side(1) [7]                // SCL rising edge
+    .wait(1, pin, 1)              [7] // Allow clock to be stretched
+    .jmp(pin, "do_nack")  .side(0)[2] // Test SDA for ACK/NAK, fall through if ACK
+
     .label("entry_point")
     .wrap_target()
-    .out(x, 6)                   // Unpack Instr count
-    .out(y, 1)                   // Unpack the NAK ignore bit
-    .jmp(not_x, "do_byte")             // Instr == 0, this is a data record.
-    .out(null, 32)               // Instr > 0, remainder of this OSR is invalid
+    .out(x, 6)                        // Unpack Instr count
+    .out(y, 1)                        // Unpack the NAK ignore bit
+    .jmp(not_x, "do_byte")            // Instr == 0, this is a data record.
+    .out(null, 32)                    // Instr > 0, remainder of this OSR is invalid
     .label("do_exec")
-    .out(exec, 16)               // Execute one instruction per FIFO word
+    .out(exec, 16)                    // Execute one instruction per FIFO word
     .jmp(x_dec, "do_exec")            // Repeat n + 1 times
     .wrap()
     .build();
