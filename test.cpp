@@ -57,6 +57,7 @@ struct Builder {
     int wrap_addr{32};
 
     std::array<std::string_view, 32> labels;
+    std::array<std::string_view, 32> target_labels;
 
     constexpr
     int lookup_label(std::string_view label) {
@@ -135,7 +136,8 @@ struct Builder {
     }
     constexpr
     Builder& jmp(literals::_cond cond, const char* addr) {
-        v[count++] = 0b000 << 13 | cond << 5 | lookup_label(addr);
+        target_labels[count] = addr;
+        v[count++] = 0b000 << 13 | cond << 5;
         return *this;
     }
 
@@ -148,6 +150,13 @@ struct Builder {
 
     constexpr
     Builder& build() {
+        // Resolve label addresses
+        for(int i = 0; i < count; ++i) {
+            if((v[i] >> 13) == 0) {
+                // Jmp
+                v[i] |= lookup_label(target_labels[i]);
+            }
+        }
         return *this;
     }
 
@@ -200,7 +209,7 @@ static void test2() {
     .wrap()
     .build();
 
-    //static_assert(b.v[0] == 0x008c);
+    static_assert(b.v[0] == 0x008c);
     static_assert(b.v[1] == 0xc030);
     static_assert(b.v[2] == 0xe027);
     static_assert(b.v[3] == 0x6781);
@@ -218,9 +227,6 @@ static void test2() {
     static_assert(b.v[15] == 0x6060);
     static_assert(b.v[16] == 0x60f0);
     static_assert(b.v[17] == 0x0050);
-    // 000 01111 010 00011
-    // 000 10111 010 00011
-
 
     static_assert(b.wrap_target_addr == 12);
     static_assert(b.wrap_addr == 17);
