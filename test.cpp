@@ -9,6 +9,7 @@ namespace literals {
     enum _ifempty : bool {noifempty, ifempty};
     //enum _dest {pins, x, y, null, pindirs};
     enum _cond {always, not_x, x_dec, not_y, y_dec, x_not_y, pin, not_osre};
+    constexpr bool opt = true;
     //enum _mode {clear /*, block */};
     //enum _src {gpip, pins, irq};
 
@@ -55,6 +56,8 @@ struct Builder {
     int count = 0;
     int wrap_target_addr{0};
     int wrap_addr{32};
+    bool opt_side{false};
+    int num_side{};
 
     std::array<std::string_view, 32> labels;
     std::array<std::string_view, 32> target_labels;
@@ -72,6 +75,13 @@ struct Builder {
         //TODO: Detect missing label
 
         return index;
+    }
+
+    constexpr
+    Builder& side_set(int num, bool opt = false) {
+        num_side = num;
+        opt_side = opt;
+        return *this;
     }
 
     constexpr
@@ -170,9 +180,14 @@ struct Builder {
     Builder& side(int index) {
         // LSB = delay
         // MSB = side
-        const bool has_side = true;  // TODO:
-        v[count - 1] |= has_side << 12;
-        v[count - 1] |= index << 11;
+
+        if(opt_side) {
+            v[count - 1] |= 1 << 12;
+            v[count - 1] |= index << (12 - num_side);
+        } else {
+            v[count - 1] |= index << (13 - num_side);
+        }
+
         return *this;
     }
 };
@@ -182,6 +197,7 @@ static void test2() {
 
     using namespace literals;
     constexpr auto b = Builder()
+    .side_set(1, opt)
     .label("do_nack")
     .jmp(y_dec, "entry_point")        // Continue if NAK was expected
     .irq(block, rel(0))               // Otherwise stop, ask for help
