@@ -1,8 +1,7 @@
-#import <array>
-#import <cstdint>
-#import <string>
-#import <string_view>
-#import <variant>
+#include <array>
+#include <cstdint>
+#include <string_view>
+#include <variant>
 
 namespace literals {
     struct _noifempty {} noifempty;
@@ -46,7 +45,6 @@ namespace literals {
 constexpr int dec(int value) {
     return value == 32 ? 0 : value;
 }
-
 
 constexpr uint16_t build_int16(std::array<bool, 16> in) {
     uint16_t value = 0;
